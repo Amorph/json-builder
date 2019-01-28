@@ -38,17 +38,46 @@
     #define snprintf _snprintf
 #endif
 
-typedef struct json_builder_state
-{
-	json_settings settings;
-} json_builder_state;
-
 static const json_serialize_opts default_opts =
 {
    json_serialize_mode_single_line,
    0,
    3  /* indent_size */
 };
+static void * default_alloc(size_t size, int zero, void * user_data)
+{
+	return zero ? calloc(1, size) : malloc(size);
+}
+
+static void default_free(void * ptr, void * user_data)
+{
+	free(ptr);
+}
+
+static void * json_builder_alloc (json_builder_state * state, unsigned long size, int zero)
+{
+	if(state->settings.mem_alloc)
+		return state->settings.mem_alloc (size, zero, state->settings.user_data);
+	return default_alloc(size, zero, state->settings.user_data);
+}
+
+static void * json_builder_free (json_builder_state * state, void * block)
+{
+	if (state->settings.mem_free)
+		state->settings.mem_free (block, state->settings.user_data);
+	else
+		default_free (block, state->settings.user_data);
+}
+
+static void * json_builder_realloc (json_builder_state * state, void * block, unsigned long old_size, unsigned long size)
+{
+  void * new_block = json_builder_alloc (state, size, 0);
+
+  memcpy (new_block, block, old_size);
+  json_builder_free (state, block);
+
+  return new_block;
+}
 
 typedef struct json_builder_value
 {
@@ -80,7 +109,7 @@ static int builderize (json_builder_state * state, json_value * value)
          json_char * name_copy;
          json_object_entry * entry = &value->u.object.values [i];
 
-         if (! (name_copy = (json_char *) malloc ((entry->name_length + 1) * sizeof (json_char))))
+         if (! (name_copy = (json_char *) json_builder_alloc (state, ((entry->name_length + 1) * sizeof (json_char)), 0)))
             return 0;
 
          memcpy (name_copy, entry->name, entry->name_length + 1);
@@ -132,7 +161,7 @@ static int get_serialize_flags (json_serialize_opts opts)
 
 json_value * json_array_new (json_builder_state * state, size_t length)
 {
-    json_value * value = (json_value *) calloc (1, sizeof (json_builder_value));
+    json_value * value = (json_value *) json_builder_alloc (state, sizeof (json_builder_value), 1);
 
     if (!value)
        return NULL;
@@ -141,9 +170,9 @@ json_value * json_array_new (json_builder_state * state, size_t length)
 
     value->type = json_array;
 
-    if (! (value->u.array.values = (json_value **) malloc (length * sizeof (json_value *))))
+    if (! (value->u.array.values = (json_value **) json_builder_alloc (state, length * sizeof (json_value *), 0)))
     {
-       free (value);
+	   json_builder_free (state, value);
        return NULL;
     }
 
@@ -165,8 +194,11 @@ json_value * json_array_push (json_builder_state * state, json_value * array, js
    }
    else
    {
-      json_value ** values_new = (json_value **) realloc
-            (array->u.array.values, sizeof (json_value *) * (array->u.array.length + 1));
+      json_value ** values_new = (json_value **) json_builder_realloc
+            (state,
+        array->u.array.values, 
+        sizeof (json_value *) * (array->u.array.length),
+        sizeof (json_value *) * (array->u.array.length + 1));
 
       if (!values_new)
          return NULL;
@@ -184,7 +216,7 @@ json_value * json_array_push (json_builder_state * state, json_value * array, js
 
 json_value * json_object_new (json_builder_state * state, size_t length)
 {
-    json_value * value = (json_value *) calloc (1, sizeof (json_builder_value));
+    json_value * value = (json_value *) json_builder_alloc (state, sizeof (json_builder_value), 1);
 
     if (!value)
        return NULL;
@@ -193,10 +225,10 @@ json_value * json_object_new (json_builder_state * state, size_t length)
 
     value->type = json_object;
 
-    if (! (value->u.object.values = (json_object_entry *) calloc
-           (length, sizeof (*value->u.object.values))))
+    if (! (value->u.object.values = (json_object_entry *) json_builder_alloc
+           (state, length * sizeof (*value->u.object.values), 1)))
     {
-       free (value);
+       json_builder_free (state, value);
        return NULL;
     }
 
@@ -206,7 +238,7 @@ json_value * json_object_new (json_builder_state * state, size_t length)
 }
 
 json_value * json_object_push (json_builder_state * state, 
-							   json_value * object,
+                               json_value * object,
                                const json_char * name,
                                json_value * value)
 {
@@ -214,7 +246,7 @@ json_value * json_object_push (json_builder_state * state,
 }
 
 json_value * json_object_push_length (json_builder_state * state, 
-									  json_value * object,
+                                      json_value * object,
                                       unsigned int name_length, const json_char * name,
                                       json_value * value)
 {
@@ -222,7 +254,7 @@ json_value * json_object_push_length (json_builder_state * state,
 
    assert (object->type == json_object);
 
-   if (! (name_copy = (json_char *) malloc ((name_length + 1) * sizeof (json_char))))
+   if (! (name_copy = (json_char *) json_builder_alloc (state, (name_length + 1) * sizeof (json_char), 0)))
       return NULL;
    
    memcpy (name_copy, name, name_length * sizeof (json_char));
@@ -230,7 +262,7 @@ json_value * json_object_push_length (json_builder_state * state,
 
    if (!json_object_push_nocopy (state, object, name_length, name_copy, value))
    {
-      free (name_copy);
+      json_builder_free (state, name_copy);
       return NULL;
    }
 
@@ -238,7 +270,7 @@ json_value * json_object_push_length (json_builder_state * state,
 }
 
 json_value * json_object_push_nocopy (json_builder_state * state, 
-									  json_value * object,
+                                      json_value * object,
                                       unsigned int name_length, json_char * name,
                                       json_value * value)
 {
@@ -256,8 +288,10 @@ json_value * json_object_push_nocopy (json_builder_state * state,
    else
    {
       json_object_entry * values_new = (json_object_entry *)
-            realloc (object->u.object.values, sizeof (*object->u.object.values)
-                            * (object->u.object.length + 1));
+            json_builder_realloc (state, 
+        object->u.object.values, 
+        sizeof(*object->u.object.values) * (object->u.object.length),
+        sizeof (*object->u.object.values) * (object->u.object.length + 1));
 
       if (!values_new)
          return NULL;
@@ -286,7 +320,7 @@ json_value * json_string_new (json_builder_state * state, const json_char * buf)
 json_value * json_string_new_length (json_builder_state * state, unsigned int length, const json_char * buf)
 {
    json_value * value;
-   json_char * copy = (json_char *) malloc ((length + 1) * sizeof (json_char));
+   json_char * copy = (json_char *) json_builder_alloc (state, (length + 1) * sizeof (json_char), 0);
 
    if (!copy)
       return NULL;
@@ -296,7 +330,7 @@ json_value * json_string_new_length (json_builder_state * state, unsigned int le
 
    if (! (value = json_string_new_nocopy (state, length, copy)))
    {
-      free (copy);
+      json_builder_free(state, copy);
       return NULL;
    }
 
@@ -305,7 +339,7 @@ json_value * json_string_new_length (json_builder_state * state, unsigned int le
 
 json_value * json_string_new_nocopy (json_builder_state * state, unsigned int length, json_char * buf)
 {
-   json_value * value = (json_value *) calloc (1, sizeof (json_builder_value));
+   json_value * value = (json_value *) json_builder_alloc (state, sizeof (json_builder_value), 1);
    
    if (!value)
       return NULL;
@@ -321,7 +355,7 @@ json_value * json_string_new_nocopy (json_builder_state * state, unsigned int le
 
 json_value * json_integer_new (json_builder_state * state, json_int_t integer)
 {
-   json_value * value = (json_value *) calloc (1, sizeof (json_builder_value));
+   json_value * value = (json_value *) json_builder_alloc (state, sizeof (json_builder_value), 0);
    
    if (!value)
       return NULL;
@@ -336,7 +370,7 @@ json_value * json_integer_new (json_builder_state * state, json_int_t integer)
 
 json_value * json_double_new (json_builder_state * state, double dbl)
 {
-   json_value * value = (json_value *) calloc (1, sizeof (json_builder_value));
+   json_value * value = (json_value *) json_builder_alloc (state, sizeof (json_builder_value), 1);
    
    if (!value)
       return NULL;
@@ -351,7 +385,7 @@ json_value * json_double_new (json_builder_state * state, double dbl)
 
 json_value * json_boolean_new (json_builder_state * state, int b)
 {
-   json_value * value = (json_value *) calloc (1, sizeof (json_builder_value));
+   json_value * value = (json_value *) json_builder_alloc (state, sizeof (json_builder_value), 1);
    
    if (!value)
       return NULL;
@@ -366,7 +400,7 @@ json_value * json_boolean_new (json_builder_state * state, int b)
 
 json_value * json_null_new (json_builder_state * state)
 {
-   json_value * value = (json_value *) calloc (1, sizeof (json_builder_value));
+   json_value * value = (json_value *) json_builder_alloc (state, sizeof (json_builder_value), 1);
    
    if (!value)
       return NULL;
@@ -432,13 +466,16 @@ json_value * json_object_merge (json_builder_state * state, json_value * objectA
    {
       json_object_entry * values_new;
 
-      unsigned int alloc =
-          objectA->u.object.length
-              + ((json_builder_value *) objectA)->additional_length_allocated
-              + objectB->u.object.length;
+    unsigned int source_size = objectA->u.object.length
+      + ((json_builder_value *) objectA)->additional_length_allocated;
+
+      unsigned int alloc = source_size + objectB->u.object.length;
 
       if (! (values_new = (json_object_entry *)
-            realloc (objectA->u.object.values, sizeof (json_object_entry) * alloc)))
+            json_builder_realloc (state,
+        objectA->u.object.values, 
+        sizeof (json_object_entry) * source_size,
+        sizeof (json_object_entry) * alloc)))
       {
           return NULL;
       }
@@ -456,8 +493,8 @@ json_value * json_object_merge (json_builder_state * state, json_value * objectA
 
    objectA->u.object.length += objectB->u.object.length;
 
-   free (objectB->u.object.values);
-   free (objectB);
+   json_builder_free (state, objectB->u.object.values);
+   json_builder_free (state, objectB);
 
    return objectA;
 }

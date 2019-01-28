@@ -57,8 +57,10 @@ extern "C"
  */
 extern const size_t json_builder_extra;
 
-typedef struct json_builder_state json_builder_state;
-
+typedef struct json_builder_state
+{
+	json_settings settings;
+} json_builder_state;
 /*** Arrays
  ***
  * Note that all of these length arguments are just a hint to allow for
@@ -73,14 +75,14 @@ json_value * json_array_push (json_builder_state * state, json_value * array, js
 json_value * json_object_new (json_builder_state * state, size_t length);
 
 json_value * json_object_push (json_builder_state * state, 
-							   json_value * object,
+                               json_value * object,
                                const json_char * name,
                                json_value *);
 
 /* Same as json_object_push, but doesn't call strlen() for you.
  */
 json_value * json_object_push_length (json_builder_state * state, 
-									  json_value * object,
+                                      json_value * object,
                                       unsigned int name_length, const json_char * name,
                                       json_value *);
 
@@ -88,7 +90,7 @@ json_value * json_object_push_length (json_builder_state * state,
  * storing it in the value.  Use this micro-optimisation at your own risk.
  */
 json_value * json_object_push_nocopy (json_builder_state * state, 
-									  json_value * object,
+                                      json_value * object,
                                       unsigned int name_length, json_char * name,
                                       json_value *);
 
