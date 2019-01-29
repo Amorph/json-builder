@@ -12,9 +12,9 @@ set_target_properties (jsonbuilder PROPERTIES VERSION 0.1.0
                                               SOVERSION 0.1)
 
 target_link_libraries (jsonbuilder jsonparser ${LIBS})
-target_include_directories(jsonbuilder PUBLIC ../json-parser)
+target_include_directories(jsonbuilder PRIVATE ../json-parser PUBLIC .)
 
-install (TARGETS jsonbuilder DESTINATION lib)
-install (FILES json-builder.h DESTINATION include)
+#install (TARGETS jsonbuilder DESTINATION lib)
+#install (FILES json-builder.h DESTINATION include)
 
 
