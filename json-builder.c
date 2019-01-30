@@ -739,7 +739,7 @@ size_t json_measure_ex (json_value * value, json_serialize_opts opts)
 
    if (opts.mode == json_serialize_mode_multiline)
    {
-      total += newlines * (((opts.opts & json_serialize_opt_CRLF) ? 2 : 1) + opts.indent_size);
+      total += newlines * (((opts.opts & json_serialize_opt_CRLF) ? 2 : 1));
       total += indents * opts.indent_size;
    }
 
