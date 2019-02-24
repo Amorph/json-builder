@@ -2,9 +2,11 @@
 cmake_minimum_required (VERSION 2.6)
 project (json-builder)
 
+add_subdirectory(../json-parser ./json-parser)
+
 set (CMAKE_C_FLAGS "-std=c89 -ansi -pedantic -Wall ${CMAKE_C_FLAGS}")
 
-set (SOURCES ${SOURCES} json-builder.c json-builder.h ../json-parser/json.c)
+set (SOURCES ${SOURCES} json-builder.c json-builder.h )
 
 add_library (jsonbuilder ${SOURCES})
 

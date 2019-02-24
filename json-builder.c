@@ -394,8 +394,6 @@ json_value * json_null_new (json_builder_state * state)
 
 void json_object_sort (json_builder_state * state, json_value * object, json_value * proto)
 {
-	// TODO add support
-	/*
    unsigned int i, out_index = 0;
 
    assert (object->type == json_object);
@@ -421,64 +419,25 @@ void json_object_sort (json_builder_state * state, json_value * object, json_val
 
          ++ out_index;
       }
-   }*/
+   }
 }
 
 json_value * json_object_merge (json_builder_state * state, json_value * objectA, json_value * objectB)
 {
-	// TODO add support
-	return NULL;
-	/*
-   unsigned int i;
+	unsigned int i;
+	assert(objectA->type == json_object);
+	assert(objectB->type == json_object);
+	assert(objectA != objectB);
 
-   assert (objectA->type == json_object);
-   assert (objectB->type == json_object);
-   assert (objectA != objectB);
+	for (i = 0; i < objectB->u.object.length; ++i)
+	{
+		json_object_push_length(state, objectA, objectB->u.object.values[i].name_length, objectB->u.object.values[i].name, objectB->u.object.values[i].value);
+	}
 
-   if (!builderize (state, objectA) || !builderize (state, objectB))
-      return NULL;
+	json_builder_free(state, objectB->u.object.values);
+	json_builder_free(state, objectB);
 
-   if (objectB->u.object.length <=
-        ((json_builder_value *) objectA)->additional_length_allocated)
-   {
-      ((json_builder_value *) objectA)->additional_length_allocated
-          -= objectB->u.object.length;
-   }
-   else
-   {
-      json_object_entry * values_new;
-
-    unsigned int source_size = objectA->u.object.length
-      + ((json_builder_value *) objectA)->additional_length_allocated;
-
-      unsigned int alloc = source_size + objectB->u.object.length;
-
-      if (! (values_new = (json_object_entry *)
-            json_builder_realloc (state,
-        objectA->u.object.values, 
-        sizeof (json_object_entry) * source_size,
-        sizeof (json_object_entry) * alloc)))
-      {
-          return NULL;
-      }
-
-      objectA->u.object.values = values_new;
-   }
-
-   for (i = 0; i < objectB->u.object.length; ++ i)
-   {
-      json_object_entry * entry = &objectA->u.object.values[objectA->u.object.length + i];
-
-      *entry = objectB->u.object.values[i];
-      entry->value->parent = objectA;
-   }
-
-   objectA->u.object.length += objectB->u.object.length;
-
-   json_builder_free (state, objectB->u.object.values);
-   json_builder_free (state, objectB);
-   */
-   return objectA;
+	return objectA;
 }
 
 static size_t measure_string (unsigned int length,
