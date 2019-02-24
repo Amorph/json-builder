@@ -22,9 +22,9 @@ target_include_directories(jsonbuilder PRIVATE ../json-parser PUBLIC .)
 
 #project (json-builder)
 
-add_executable(jsonbuildertest "test/main.cc")
-target_include_directories(jsonbuildertest
-	PUBLIC ${PROJECT_SOURCE_DIR}/../json-parser/
-)
-target_link_libraries(jsonbuildertest jsonbuilder)
+#add_executable(jsonbuildertest "test/main.cc")
+#target_include_directories(jsonbuildertest
+#	PUBLIC ${PROJECT_SOURCE_DIR}/../json-parser/
+#)
+#target_link_libraries(jsonbuildertest jsonbuilder)
 
