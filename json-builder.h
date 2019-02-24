@@ -66,32 +66,29 @@ typedef struct json_builder_state
  * Note that all of these length arguments are just a hint to allow for
  * pre-allocation - passing 0 is fine.
  */
-json_value * json_array_new (json_builder_state * state, size_t length);
+json_value * json_array_new (json_builder_state * state);
 json_value * json_array_push (json_builder_state * state, json_value * array, json_value *);
+json_value * json_array_del (json_builder_state * state, json_value * array, unsigned int i);
 
 
 /*** Objects
  ***/
-json_value * json_object_new (json_builder_state * state, size_t length);
+json_value * json_object_new (json_builder_state * state);
 
 json_value * json_object_push (json_builder_state * state, 
                                json_value * object,
                                const json_char * name,
                                json_value *);
 
+json_value * json_object_del (json_builder_state * state, 
+                               json_value * object,
+                               unsigned int index);
+
 /* Same as json_object_push, but doesn't call strlen() for you.
  */
 json_value * json_object_push_length (json_builder_state * state, 
                                       json_value * object,
                                       unsigned int name_length, const json_char * name,
-                                      json_value *);
-
-/* Same as json_object_push_length, but doesn't copy the name buffer before
- * storing it in the value.  Use this micro-optimisation at your own risk.
- */
-json_value * json_object_push_nocopy (json_builder_state * state, 
-                                      json_value * object,
-                                      unsigned int name_length, json_char * name,
                                       json_value *);
 
 /* Merges all entries from objectB into objectA and destroys objectB.
@@ -109,7 +106,6 @@ void json_object_sort (json_builder_state * state, json_value * object, json_val
  ***/
 json_value * json_string_new (json_builder_state * state, const json_char *);
 json_value * json_string_new_length (json_builder_state * state, unsigned int length, const json_char *);
-json_value * json_string_new_nocopy (json_builder_state * state, unsigned int length, json_char *);
 
 
 /*** Everything else

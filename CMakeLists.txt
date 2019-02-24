@@ -4,16 +4,27 @@ project (json-builder)
 
 set (CMAKE_C_FLAGS "-std=c89 -ansi -pedantic -Wall -I../json-parser ${CMAKE_C_FLAGS}")
 
-set (SOURCES ${SOURCES} json-builder.c)
+set (SOURCES ${SOURCES} json-builder.c ../json-parser/json.c)
 
 add_library (jsonbuilder ${SOURCES})
 
 set_target_properties (jsonbuilder PROPERTIES VERSION 0.1.0
                                               SOVERSION 0.1)
+target_include_directories(jsonbuilder
+	PUBLIC ${PROJECT_SOURCE_DIR}/../json-parser/
+)
 
 target_link_libraries (jsonbuilder ${LIBS})
+
 
 install (TARGETS jsonbuilder DESTINATION lib)
 install (FILES json-builder.h DESTINATION include)
 
+#project (json-builder)
+
+add_executable(jsonbuildertest "test/main.cc")
+target_include_directories(jsonbuildertest
+	PUBLIC ${PROJECT_SOURCE_DIR}/../json-parser/
+)
+target_link_libraries(jsonbuildertest jsonbuilder)
 
