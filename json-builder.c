@@ -61,7 +61,7 @@ static void * json_builder_alloc (json_builder_state * state, unsigned long size
 	return default_alloc(size, zero, state->settings.user_data);
 }
 
-static void * json_builder_free (json_builder_state * state, void * block)
+static void json_builder_free (json_builder_state * state, void * block)
 {
 	if (state->settings.mem_free)
 		state->settings.mem_free (block, state->settings.user_data);
@@ -721,7 +721,7 @@ size_t json_measure_ex (json_value * value, json_serialize_opts opts)
 
    if (opts.mode == json_serialize_mode_multiline)
    {
-      total += newlines * (((opts.opts & json_serialize_opt_CRLF) ? 2 : 1) + opts.indent_size);
+      total += newlines * (((opts.opts & json_serialize_opt_CRLF) ? 2 : 1));
       total += indents * opts.indent_size;
    }
 
